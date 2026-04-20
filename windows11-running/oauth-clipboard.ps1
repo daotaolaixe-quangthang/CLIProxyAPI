@@ -3,12 +3,19 @@ param(
     [string]$LoginFlag
 )
 
-$exe    = "E:\CLIProxyAPI\cli-proxy-api.exe"
-$config = "C:\Users\Admin\.cli-proxy-api\config.yaml"
+# Duong dan tuong doi: exe nam cung thu muc voi script nay
+$exe    = Join-Path $PSScriptRoot "cli-proxy-api.exe"
+
+# Config nam trong thu muc chuan cua nguoi dung Windows (~/.cli-proxy-api/)
+$config = Join-Path $env:USERPROFILE ".cli-proxy-api\config.yaml"
+
 $global:urlCopied = $false
 
 Write-Host ""
 Write-Host "  [READY] Dang khoi dong OAuth - cho URL xuat hien..." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  [INFO] Exe  : $exe"   -ForegroundColor DarkGray
+Write-Host "  [INFO] Config: $config" -ForegroundColor DarkGray
 Write-Host ""
 
 & $exe --config $config $LoginFlag --no-browser 2>&1 | ForEach-Object {

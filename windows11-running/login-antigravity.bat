@@ -12,7 +12,7 @@ echo [INFO] Dang nhap Google account dang active
 echo [INFO] OAuth callback dung port 51121
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "E:\CLIProxyAPI\oauth-clipboard.ps1" -LoginFlag "--antigravity-login"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0oauth-clipboard.ps1" -LoginFlag "--antigravity-login"
 
 echo.
 echo [SUCCESS] Antigravity OAuth hoan tat!

@@ -10,7 +10,7 @@ echo [INFO] Dang nhap vao tai khoan OpenAI cua ban
 echo [INFO] OAuth callback dung port 1455
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "E:\CLIProxyAPI\oauth-clipboard.ps1" -LoginFlag "--codex-login"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0oauth-clipboard.ps1" -LoginFlag "--codex-login"
 
 echo.
 echo [SUCCESS] OAuth Codex hoan tat!

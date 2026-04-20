@@ -13,7 +13,7 @@ echo [LUU Y] Day la provider MIEN PHI voi quota cao
 echo         Gemini 2.5 Pro / Flash / Flash-Lite
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "E:\CLIProxyAPI\oauth-clipboard.ps1" -LoginFlag "--login"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0oauth-clipboard.ps1" -LoginFlag "--login"
 
 echo.
 echo [SUCCESS] OAuth Gemini CLI hoan tat!
