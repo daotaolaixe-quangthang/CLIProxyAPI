@@ -9,10 +9,119 @@ set "BASE_CONFIG=%USERPROFILE%\.cli-proxy-api\config.yaml"
 set "AUTH_DIR=%USERPROFILE%\.cli-proxy-api"
 set "TEMP_DIR=%USERPROFILE%\.cli-proxy-api-single"
 set "TEMP_CONFIG=%USERPROFILE%\.cli-proxy-api-single\config-single.yaml"
+set "GITHUB_REPO=router-for-me/CLIProxyAPI"
+set "UPDATE_TMP=%TEMP%\clipa-update"
 
+:: ================================================================
+:: BUOC 0: Kiem tra phien ban moi nhat tren GitHub
+:: ================================================================
+echo.
+echo [UPDATE] Dang kiem tra phien ban moi nhat tu GitHub...
+echo.
+
+:: Lay current local version (parse tu stderr cua exe)
+set "LOCAL_VER=unknown"
+if exist "%EXE%" (
+  for /f "tokens=3 delims=: ," %%V in ('"%EXE%" --version 2^>^&1 ^| findstr /i "Version:"') do (
+    set "LOCAL_VER=%%V"
+    goto :got_local_ver
+  )
+)
+:got_local_ver
+set "LOCAL_VER=!LOCAL_VER: =!"
+
+:: Lay latest version tu GitHub API (dung PowerShell)
+set "LATEST_VER="
+for /f "delims=" %%T in ('powershell -NoProfile -Command ^
+  "try{(Invoke-RestMethod 'https://api.github.com/repos/%GITHUB_REPO%/releases/latest').tag_name}catch{'ERROR'}" ^
+  2^>nul') do set "LATEST_VER=%%T"
+
+if not defined LATEST_VER set "LATEST_VER=ERROR"
+if "!LATEST_VER!"=="ERROR" (
+  echo [WARN] Khong ket noi duoc GitHub. Bo qua kiem tra update.
+  echo.
+  goto :skip_update
+)
+
+echo   Local   : !LOCAL_VER!
+echo   Latest  : !LATEST_VER!
+echo.
+
+:: So sanh version (bo prefix "v")
+set "LATEST_CLEAN=!LATEST_VER:v=!"
+set "LOCAL_CLEAN=!LOCAL_VER:v=!"
+
+if "!LOCAL_CLEAN!"=="!LATEST_CLEAN!" (
+  echo [OK] Ban dang dung phien ban moi nhat.
+  echo.
+  goto :skip_update
+)
+
+echo ================================================================
+echo   CO PHIEN BAN MOI: !LATEST_VER!  ^(hien tai: !LOCAL_VER!^)
+echo ================================================================
+echo.
+choice /c YN /n /m "Tai va cap nhat ngay? [Y=Co / N=Bo qua]: "
+if errorlevel 2 (
+  echo [INFO] Bo qua cap nhat. Tiep tuc voi phien ban cu.
+  echo.
+  goto :skip_update
+)
+
+:: Tien hanh download va giai nen
+echo.
+echo [UPDATE] Dang tai !LATEST_VER! ...
+if not exist "%UPDATE_TMP%" mkdir "%UPDATE_TMP%"
+set "ZIP_NAME=CLIProxyAPI_!LATEST_CLEAN!_windows_amd64.zip"
+set "ZIP_URL=https://github.com/%GITHUB_REPO%/releases/download/!LATEST_VER!/!ZIP_NAME!"
+set "ZIP_PATH=%UPDATE_TMP%\!ZIP_NAME!"
+
+powershell -NoProfile -Command ^
+  "try{ Invoke-WebRequest -Uri '!ZIP_URL!' -OutFile '!ZIP_PATH!' -UseBasicParsing; Write-Host 'DOWNLOAD_OK' }catch{ Write-Host ('DOWNLOAD_FAIL:'+$_.Exception.Message) }" > "%UPDATE_TMP%\dl_result.txt" 2>&1
+set /p DL_RESULT=<"%UPDATE_TMP%\dl_result.txt"
+
+if not "!DL_RESULT!"=="DOWNLOAD_OK" (
+  echo [ERROR] Tai that bai: !DL_RESULT!
+  echo [INFO] Tiep tuc voi phien ban cu.
+  echo.
+  goto :skip_update
+)
+
+echo [UPDATE] Dang giai nen...
+powershell -NoProfile -Command ^
+  "Expand-Archive -Path '!ZIP_PATH!' -DestinationPath '!ZIP_PATH!.extracted' -Force" 2>nul
+
+:: Tim cli-proxy-api.exe trong thu muc giai nen
+set "NEW_EXE="
+for /r "%ZIP_PATH%.extracted" %%F in (cli-proxy-api.exe) do set "NEW_EXE=%%F"
+
+if not defined NEW_EXE (
+  echo [ERROR] Khong tim thay cli-proxy-api.exe trong zip.
+  echo [INFO] Tiep tuc voi phien ban cu.
+  goto :skip_update
+)
+
+:: Backup exe cu va thay the
+copy /y "%EXE%" "%EXE%.backup" >nul 2>&1
+copy /y "!NEW_EXE!" "%EXE%" >nul
+if errorlevel 1 (
+  echo [ERROR] Khong the ghi de exe. Thu chay bat nay voi quyen Admin.
+  goto :skip_update
+)
+
+:: Don dep file tam
+rd /s /q "%ZIP_PATH%.extracted" >nul 2>&1
+del /q "%ZIP_PATH%" >nul 2>&1
+del /q "%UPDATE_TMP%\dl_result.txt" >nul 2>&1
+
+echo [OK] Da cap nhat thanh cong: !LOCAL_VER! --^> !LATEST_VER!
+echo.
+
+:skip_update
 if not exist "%EXE%" ( echo [ERROR] Khong tim thay: %EXE% & pause & exit /b 1 )
 if not exist "%BASE_CONFIG%" ( echo [ERROR] Khong tim thay config: %BASE_CONFIG% & pause & exit /b 1 )
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
+
 
 :: ================================================================
 :: BUOC 1: Quet TEMP_DIR xem co *.json -> detect config cu khong
