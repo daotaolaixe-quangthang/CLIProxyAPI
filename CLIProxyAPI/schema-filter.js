@@ -66,6 +66,14 @@ function cleanPayload(json) {
 }
 
 const server = http.createServer((req, res) => {
+  // Absorb health-check pings (HEAD /) locally -- do not forward to CLIProxyAPI
+  // to prevent spurious 404 error log files being created upstream.
+  if (req.method === 'HEAD' && req.url === '/') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
   const chunks = [];
   req.on('data', c => chunks.push(c));
   req.on('end', () => {
