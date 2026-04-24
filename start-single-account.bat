@@ -19,22 +19,23 @@ echo.
 echo [UPDATE] Dang kiem tra phien ban moi nhat tu GitHub...
 echo.
 
-:: Lay current local version (parse tu stderr cua exe)
+:: Tao thu muc tam neu chua co
+if not exist "%UPDATE_TMP%" mkdir "%UPDATE_TMP%"
+
+:: Lay current local version (dung ps1 helper tranh loi escape quotes)
+set "GET_VER_PS1=%~dp0CLIProxyAPI\get-local-version.ps1"
 set "LOCAL_VER=unknown"
 if exist "%EXE%" (
-  for /f "tokens=3 delims=: ," %%V in ('"%EXE%" --version 2^>^&1 ^| findstr /i "Version:"') do (
-    set "LOCAL_VER=%%V"
-    goto :got_local_ver
+  if exist "%GET_VER_PS1%" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%GET_VER_PS1%" -ExePath "%EXE%" > "%UPDATE_TMP%\local_ver.txt" 2>nul
+    if exist "%UPDATE_TMP%\local_ver.txt" set /p LOCAL_VER=<"%UPDATE_TMP%\local_ver.txt"
   )
 )
-:got_local_ver
-set "LOCAL_VER=!LOCAL_VER: =!"
 
-:: Lay latest version tu GitHub API (dung PowerShell)
+:: Lay latest version tu GitHub API (ghi ra file temp tranh loi escape quotes)
 set "LATEST_VER="
-for /f "delims=" %%T in ('powershell -NoProfile -Command ^
-  "try{(Invoke-RestMethod 'https://api.github.com/repos/%GITHUB_REPO%/releases/latest').tag_name}catch{'ERROR'}" ^
-  2^>nul') do set "LATEST_VER=%%T"
+powershell -NoProfile -Command "try{(Invoke-RestMethod 'https://api.github.com/repos/%GITHUB_REPO%/releases/latest').tag_name}catch{'ERROR'}" > "%UPDATE_TMP%\latest_ver.txt" 2>nul
+if exist "%UPDATE_TMP%\latest_ver.txt" set /p LATEST_VER=<"%UPDATE_TMP%\latest_ver.txt"
 
 if not defined LATEST_VER set "LATEST_VER=ERROR"
 if "!LATEST_VER!"=="ERROR" (
