@@ -1,0 +1,178 @@
+# ============================================================
+# CLIProxyAPI Configuration - Ashley Nguyen
+# Updated: 2026-04-24 - OPTIMIZED: fix TCP abort on long Opus+thinking requests
+# Provider: OpenAI Codex OAuth (3 accounts)
+# Real Codex models: gpt-5.4 / gpt-5.4-mini / gpt-5.3-codex
+# ============================================================
+
+host: "127.0.0.1"
+port: 8318
+# ── Management Web UI ──────────────────────────────────────
+remote-management:
+  allow-remote: false
+  secret-key: "$2a$10$jAVcxKj44VXIKusPRF1dPu0WbRKTc/zY4VwWRlrqBqjWmdBTVNA7y"
+  disable-control-panel: false
+  panel-github-repository: "https://github.com/router-for-me/Cli-Proxy-API-Management-Center"
+# ── Auth ────────────────────────────────────────────────────
+# ANTHROPIC_AUTH_TOKEN phai khop voi api-keys nay
+auth-dir: "~/.cli-proxy-api"
+api-keys:
+  - "sk-my-secret-key"
+# ── Logging ────────────────────────────────────────────────
+debug: false
+logging-to-file: true # BẬT: lưu log file để dễ debug
+logs-max-total-size-mb: 200 # tăng để giữ đủ history
+error-logs-max-files: 20
+usage-statistics-enabled: true
+proxy-url: ""
+passthrough-headers: true # BẬT: forward đầy đủ Claude Code headers
+nonstream-keepalive-interval: 30 # tránh idle disconnect với tool calls
+# ── Retry & Failover ───────────────────────────────────────
+request-retry: 3
+max-retry-credentials: 0
+max-retry-interval: 30
+quota-exceeded:
+  switch-project: true
+  switch-preview-model: true
+  antigravity-credits: true
+# ── Routing & Session Affinity ─────────────────────────────
+# session-affinity = FIX loi "dot token" nhu 9Router
+# Giu conversation o cung 1 account, tranh gui lai full context
+routing:
+  strategy: "round-robin"
+  session-affinity: true
+  session-affinity-ttl: "12h" # tăng từ 8h: ổn định hơn cho long sessions
+streaming:
+  keepalive-seconds: 30  # tăng từ 20: ổn định hơn với Opus+thinking dài (>2 phút)
+  bootstrap-retries: 3  # giữ nguyên: ổn định khi failover giữa accounts
+# ── OAuth Model Aliases ────────────────────────────────────
+# Claude Code CLI gui ten model Claude → CLIProxyAPI doi sang Codex
+# Real Codex models xac nhan tu /v1/models:
+#   gpt-5.4       (manh nhat)
+#   gpt-5.4-mini  (nhanh)
+#   gpt-5.3-codex (nhe nhat)
+#   gpt-5.2       (du phong)
+oauth-model-alias:
+  codex:
+# OPUS → gpt-5.4 (manh nhat, dung cho tac vu kho)
+    - name: "gpt-5.4"
+      alias: "claude-opus-4-5-20251101"
+    - name: "gpt-5.4"
+      alias: "claude-opus-4-1-20250805"
+      fork: true
+    - name: "gpt-5.4"
+      alias: "claude-opus-4-20250514"
+      fork: true
+# SONNET → gpt-5.4-mini (can bang toc do / chat luong)
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-5-20250929" # PRIMARY sonnet
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-6" # shortname dung boi Claude Code v2.1.85+
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-5" # shortname khong year suffix
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-20250514"
+      fork: true
+# HAIKU → gpt-5.3-codex (nhanh nhat, tac vu don gian)
+    - name: "gpt-5.3-codex"
+      alias: "claude-haiku-4-5-20251101"
+      fork: true
+    - name: "gpt-5.3-codex"
+      alias: "claude-3-5-haiku-20241022"
+      fork: true
+# ── OAuth Model Aliases: ANTIGRAVITY ──────────────────────
+# Antigravity OAuth account (Google internal AI access)
+# Real models xac nhan tu /v1/models khi proxy chay:
+#
+#   TIER 1 - MANH NHAT (tuong duong Opus):
+#     gemini-3-pro-high    → phien ban cu
+#     gemini-3.1-pro-high  → phien ban moi hon (DUNG CAI NAY)
+#
+#   TIER 2 - CAN BANG (tuong duong Sonnet):
+#     gemini-3-pro-low     → phien ban cu
+#     gemini-3.1-pro-low   → phien ban moi hon (DUNG CAI NAY)
+#
+#   TIER 3 - NHANH NHAT (tuong duong Haiku):
+#     gemini-3-flash       → phien ban cu
+#     gemini-3.1-flash-lite → phien ban moi hon (DUNG CAI NAY)
+#     gemini-3.1-flash-image → co kha nang xu ly anh
+#
+#   BONUS - Claude chay qua Antigravity:
+#     claude-opus-4-6-thinking → Claude Opus co thinking
+#     claude-sonnet-4-6        → Claude Sonnet ngan gon
+#
+#   BONUS - Other:
+#     gpt-oss-120b-medium → GPT OSS 120B model
+  antigravity:
+# OPUS → gemini-3.1-pro-high (manh nhat)
+    - name: "claude-sonnet-4-6"
+      alias: "claude-opus-4-5-20251101"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-opus-4-1-20250805"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-opus-4-20250514"
+      fork: true
+# SONNET → gemini-3.1-pro-low (can bang toc do / chat luong)
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-5-20250929"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-6"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-5"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-20250514"
+      fork: true
+# HAIKU → gemini-3.1-flash-lite (nhanh nhat, tac vu don gian)
+    - name: "claude-sonnet-4-6"
+      alias: "claude-haiku-4-5-20251101"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-3-5-haiku-20241022"
+      fork: true
+# ── Payload Filter: Strip unsupported JSON Schema fields ───────────────────
+# Antigravity/Gemini API KHONG ho tro cac JSON Schema keyword sau day.
+# Claude Code CLI tu dong them cac field nay vao tool definitions → 400 error.
+# Filter nay ap dung cho Antigravity format payload (sau khi proxy convert).
+#
+# Path format: Gemini/Antigravity JSON format
+#   tools[].function_declarations[].parameters.properties.{KEY}.propertyNames
+#
+# Keywords bi tu choi boi Gemini API:
+#   - propertyNames     (JSON Schema Draft-7)
+#   - additionalProperties (Gemini chi support subset of JSON Schema)
+#   - patternProperties
+#   - $schema, $id, $ref, $defs, anyOf, oneOf, allOf
+#
+# Wildcard syntax:
+#   #  = iterate over array elements
+#   *  = any object key
+payload:
+  filter:
+    - models:
+        - name: "*"
+          protocol: "antigravity"
+      params:
+        # ── propertyNames ─────────────────────────────────────────────────
+        # Depth 0: parameters.propertyNames
+        - "tools.#.function_declarations.#.parameters.propertyNames"
+        # Depth 1: parameters.properties.{KEY}.propertyNames
+        - "tools.#.function_declarations.#.parameters.properties.*.propertyNames"
+        # Depth 2a: ...properties.{KEY}.items.properties.{KEY}.propertyNames
+        - "tools.#.function_declarations.#.parameters.properties.*.items.properties.*.propertyNames"
+        # Depth 2b: ...properties.{KEY}.properties.{KEY}.propertyNames
+        - "tools.#.function_declarations.#.parameters.properties.*.properties.*.propertyNames"
+        # ── additionalProperties ──────────────────────────────────────────
+        - "tools.#.function_declarations.#.parameters.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.properties.*.additionalProperties"
+        # ── patternProperties ─────────────────────────────────────────────
+        - "tools.#.function_declarations.#.parameters.properties.*.patternProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.properties.*.patternProperties"

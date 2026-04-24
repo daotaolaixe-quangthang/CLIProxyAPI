@@ -1,0 +1,29 @@
+# ============================================================
+# CLIProxyAPI - .gitignore
+# ============================================================
+
+# ── OAuth Credentials (NHAY CAM - TUYET DOI KHONG PUSH) ────
+# Cac file nay chua Google/OpenAI OAuth tokens ca nhan
+*.json
+!package.json
+!package-lock.json
+
+# ── Management Key (NHAY CAM) ───────────────────────────────
+# File thuc dung - chi giu file .example tren repo
+*.local.key
+
+# ── Log Files ───────────────────────────────────────────────
+*.log
+logs/
+*.log.*
+
+# ── Temporary / Build ───────────────────────────────────────
+*.tmp
+*.vbs
+node_modules/
+
+# ── OS / Editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/settings.json
