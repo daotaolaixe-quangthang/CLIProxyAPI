@@ -123,6 +123,21 @@ if not exist "%EXE%" ( echo [ERROR] Khong tim thay: %EXE% & pause & exit /b 1 )
 if not exist "%BASE_CONFIG%" ( echo [ERROR] Khong tim thay config: %BASE_CONFIG% & pause & exit /b 1 )
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%"
 
+:: ================================================================
+:: BUOC 0b: Kiem tra va giai phong port 8317 va 8318 truoc khi chay
+:: ================================================================
+echo [INFO] Kiem tra port 8317 va 8318...
+powershell -NoProfile -Command ^
+  "$ports=@(8317,8318);$busy=$false;" ^
+  "foreach($p in $ports){" ^
+  "  $pids=(netstat -ano|Select-String (':'+$p+' ')|ForEach-Object{($_ -split '\s+')[-1]}|Sort-Object -Unique);" ^
+  "  if($pids){$busy=$true;Write-Host ('  [WARN] Port '+$p+' bi chiem. Dang giai phong...');" ^
+  "    $pids|ForEach-Object{try{Stop-Process -Id $_ -Force -EA Stop;Write-Host ('    -> Killed PID '+$_)}catch{}}}" ^
+  "  else{Write-Host ('  [OK] Port '+$p+' san sang.')}" ^
+  "}" ^
+  "if($busy){Start-Sleep -Seconds 1;Write-Host '[OK] Da giai phong xong.'}" ^
+  "else{Write-Host '[OK] Ca 2 port san sang.'}"
+echo.
 
 :: ================================================================
 :: BUOC 1: Quet TEMP_DIR xem co *.json -> detect config cu khong
@@ -245,8 +260,6 @@ for %%F in ("%TEMP_DIR%\*.json") do set /a ACT_COUNT+=1
 :: Schema-filter luon chay tren 8317, CLIProxyAPI luon tren 8318
 set "FILTER_PORT=8317"
 set "USE_PORT=8318"
-:: Kill bat ky schema-filter cu nao dang chay (dung port check vi chay hidden)
-for /f "tokens=5" %%P in ('netstat -ano 2^>nul ^| findstr ":!FILTER_PORT! "') do taskkill /f /pid %%P >nul 2>&1
 
 :: Start schema-filter.js (port 8317 -^> 8318) HIDDEN - khong hien cua so
 :: Dung wscript.exe voi window style 0 (giong start-proxy-hidden.vbs)

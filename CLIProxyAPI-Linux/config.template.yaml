@@ -1,0 +1,125 @@
+# ============================================================
+# CLIProxyAPI Linux Template
+# Reference template mirrored by install.sh
+# OAuth auth files will be stored under ~/.cli-proxy-api
+# ============================================================
+
+host: "127.0.0.1"
+port: 8318
+
+remote-management:
+  allow-remote: false
+  secret-key: "__MANAGEMENT_KEY__"
+  disable-control-panel: false
+  panel-github-repository: "https://github.com/router-for-me/Cli-Proxy-API-Management-Center"
+
+auth-dir: "~/.cli-proxy-api"
+api-keys:
+  - "__API_KEY__"
+
+debug: false
+logging-to-file: true
+logs-max-total-size-mb: 200
+error-logs-max-files: 20
+usage-statistics-enabled: true
+proxy-url: ""
+passthrough-headers: true
+nonstream-keepalive-interval: 30
+
+request-retry: 3
+max-retry-credentials: 0
+max-retry-interval: 30
+
+quota-exceeded:
+  switch-project: true
+  switch-preview-model: true
+  antigravity-credits: true
+
+routing:
+  strategy: "round-robin"
+  session-affinity: true
+  session-affinity-ttl: "12h"
+
+streaming:
+  keepalive-seconds: 30
+  bootstrap-retries: 3
+
+oauth-model-alias:
+  codex:
+    - name: "gpt-5.4"
+      alias: "claude-opus-4-5-20251101"
+    - name: "gpt-5.4"
+      alias: "claude-opus-4-1-20250805"
+      fork: true
+    - name: "gpt-5.4"
+      alias: "claude-opus-4-20250514"
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-5-20250929"
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-6"
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-5"
+      fork: true
+    - name: "gpt-5.4-mini"
+      alias: "claude-sonnet-4-20250514"
+      fork: true
+    - name: "gpt-5.3-codex"
+      alias: "claude-haiku-4-5-20251101"
+      fork: true
+    - name: "gpt-5.3-codex"
+      alias: "claude-3-5-haiku-20241022"
+      fork: true
+  antigravity:
+    - name: "claude-sonnet-4-6"
+      alias: "claude-opus-4-5-20251101"
+    - name: "claude-sonnet-4-6"
+      alias: "claude-opus-4-1-20250805"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-opus-4-20250514"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-5-20250929"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-6"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-5"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-sonnet-4-20250514"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-haiku-4-5-20251101"
+      fork: true
+    - name: "claude-sonnet-4-6"
+      alias: "claude-3-5-haiku-20241022"
+      fork: true
+
+payload:
+  filter:
+    - models:
+        - name: "*"
+          protocol: "antigravity"
+      params:
+        - "tools.#.function_declarations.#.parameters.propertyNames"
+        - "tools.#.function_declarations.#.parameters.properties.*.propertyNames"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.properties.*.propertyNames"
+        - "tools.#.function_declarations.#.parameters.properties.*.properties.*.propertyNames"
+        - "tools.#.function_declarations.#.parameters.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.properties.*.additionalProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.patternProperties"
+        - "tools.#.function_declarations.#.parameters.properties.*.items.properties.*.patternProperties"
+        - "tools.#.function_declarations.#.parameters.$schema"
+        - "tools.#.function_declarations.#.parameters.$id"
+        - "tools.#.function_declarations.#.parameters.$ref"
+        - "tools.#.function_declarations.#.parameters.$defs"
+        - "tools.#.function_declarations.#.parameters.anyOf"
+        - "tools.#.function_declarations.#.parameters.oneOf"
+        - "tools.#.function_declarations.#.parameters.allOf"
