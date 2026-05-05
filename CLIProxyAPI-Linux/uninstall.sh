@@ -33,6 +33,7 @@ fi
 
 for cmd in \
   cliproxyapi \
+  cliproxyapi-preflight \
   cliproxyapi-start \
   cliproxyapi-codex-login \
   cliproxyapi-claude-login \

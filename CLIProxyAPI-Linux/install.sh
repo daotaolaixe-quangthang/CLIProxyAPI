@@ -260,10 +260,12 @@ write_start_wrapper() {
   local target="$1"
   local binary_path="$2"
   local config_path="$3"
+  local preflight_path="$4"
 
   cat > "$target" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
+"$preflight_path" "$config_path"
 exec "$binary_path" -config "$config_path" "\$@"
 EOF
   chmod 755 "$target"
@@ -331,6 +333,7 @@ write_service_unit() {
   local target="$1"
   local binary_path="$2"
   local config_path="$3"
+  local preflight_path="$4"
 
   mkdir -p "$(dirname "$target")"
   cat > "$target" <<EOF
@@ -341,6 +344,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+ExecStartPre=$preflight_path $config_path
 ExecStart=$binary_path -config $config_path
 Restart=always
 RestartSec=5
@@ -354,6 +358,8 @@ EOF
 write_systemd_install_wrapper() {
   local target="$1"
   local service_path="$2"
+  local preflight_path="$3"
+  local config_path="$4"
 
   cat > "$target" <<EOF
 #!/usr/bin/env bash
@@ -366,6 +372,7 @@ command -v systemctl >/dev/null 2>&1 || {
   exit 1
 }
 
+"$preflight_path" "$config_path"
 systemctl --user daemon-reload
 systemctl --user enable --now "$(basename "$SERVICE_PATH")"
 systemctl --user status "$(basename "$SERVICE_PATH")" --no-pager || true
@@ -404,6 +411,22 @@ EOF
   chmod 755 "$target"
 }
 
+write_systemd_control_wrapper_with_preflight() {
+  local target="$1"
+  local verb="$2"
+  local service_path="$3"
+  local preflight_path="$4"
+  local config_path="$5"
+
+  cat > "$target" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+"$preflight_path" "$config_path"
+exec systemctl --user $verb "$(basename "$service_path")" "\$@"
+EOF
+  chmod 755 "$target"
+}
+
 write_systemd_logs_wrapper() {
   local target="$1"
   local service_path="$2"
@@ -412,6 +435,83 @@ write_systemd_logs_wrapper() {
 #!/usr/bin/env bash
 set -euo pipefail
 exec journalctl --user -u "$(basename "$service_path")" -n 200 -f "\$@"
+EOF
+  chmod 755 "$target"
+}
+
+write_preflight_script() {
+  local target="$1"
+
+  cat > "$target" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIG_PATH="${1:-}"
+
+if [ -z "$CONFIG_PATH" ]; then
+  echo "usage: cliproxyapi-preflight <config-path>" >&2
+  exit 1
+fi
+
+if [ ! -f "$CONFIG_PATH" ]; then
+  echo "config file not found: $CONFIG_PATH" >&2
+  exit 1
+fi
+
+if ! command -v ss >/dev/null 2>&1; then
+  echo "required command not found: ss" >&2
+  exit 1
+fi
+
+PORT="$(sed -n 's/^port:[[:space:]]*//p' "$CONFIG_PATH" | head -n 1 | tr -d '"' | tr -d '\r' || true)"
+if [ -z "$PORT" ]; then
+  PORT="8318"
+fi
+
+mapfile -t PIDS < <(
+  ss -ltnpH "( sport = :$PORT )" 2>/dev/null |
+    grep -o 'pid=[0-9]\+' |
+    cut -d= -f2 |
+    sort -u
+)
+
+if [ "${#PIDS[@]}" -eq 0 ]; then
+  exit 0
+fi
+
+declare -a CLI_PIDS=()
+
+for pid in "${PIDS[@]}"; do
+  if [ ! -r "/proc/$pid/comm" ]; then
+    echo "port $PORT is in use by pid $pid, but process details are not accessible" >&2
+    exit 1
+  fi
+
+  comm="$(tr -d '\r\n' < "/proc/$pid/comm")"
+  case "$comm" in
+    cli-proxy-api)
+      CLI_PIDS+=("$pid")
+      ;;
+    *)
+      echo "port $PORT is already in use by non-CLIProxyAPI process: pid=$pid comm=$comm" >&2
+      exit 1
+      ;;
+  esac
+done
+
+for pid in "${CLI_PIDS[@]}"; do
+  kill "$pid" >/dev/null 2>&1 || true
+done
+
+for _ in $(seq 1 20); do
+  if ! ss -ltnH "( sport = :$PORT )" 2>/dev/null | grep -q .; then
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "port $PORT is still busy after attempting to stop existing cli-proxy-api process" >&2
+exit 1
 EOF
   chmod 755 "$target"
 }
@@ -538,18 +638,19 @@ main() {
   fi
 
   write_cli_wrapper "$BIN_DIR/cliproxyapi" "$APP_DIR/cli-proxy-api"
-  write_start_wrapper "$BIN_DIR/cliproxyapi-start" "$APP_DIR/cli-proxy-api" "$CONFIG_PATH"
+  write_preflight_script "$BIN_DIR/cliproxyapi-preflight"
+  write_start_wrapper "$BIN_DIR/cliproxyapi-start" "$APP_DIR/cli-proxy-api" "$CONFIG_PATH" "$BIN_DIR/cliproxyapi-preflight"
   write_login_wrapper "$BIN_DIR/cliproxyapi-codex-login" "$APP_DIR/cli-proxy-api" "-codex-login" "$CONFIG_PATH"
   write_login_wrapper "$BIN_DIR/cliproxyapi-claude-login" "$APP_DIR/cli-proxy-api" "-claude-login" "$CONFIG_PATH"
   write_login_wrapper "$BIN_DIR/cliproxyapi-antigravity-login" "$APP_DIR/cli-proxy-api" "-antigravity-login" "$CONFIG_PATH"
   write_login_wrapper "$BIN_DIR/cliproxyapi-gemini-login" "$APP_DIR/cli-proxy-api" "-login" "$CONFIG_PATH"
   write_cpaq_wrapper "$BIN_DIR/cpaq" "$APP_DIR/cpa-quota-inspector" "$CONFIG_PATH" "$CONFIG_DIR/management.key"
-  write_service_unit "$SERVICE_PATH" "$APP_DIR/cli-proxy-api" "$CONFIG_PATH"
-  write_systemd_install_wrapper "$BIN_DIR/cliproxyapi-service-install" "$SERVICE_PATH"
+  write_service_unit "$SERVICE_PATH" "$APP_DIR/cli-proxy-api" "$CONFIG_PATH" "$BIN_DIR/cliproxyapi-preflight"
+  write_systemd_install_wrapper "$BIN_DIR/cliproxyapi-service-install" "$SERVICE_PATH" "$BIN_DIR/cliproxyapi-preflight" "$CONFIG_PATH"
   write_systemd_uninstall_wrapper "$BIN_DIR/cliproxyapi-service-uninstall" "$SERVICE_PATH"
-  write_systemd_control_wrapper "$BIN_DIR/cliproxyapi-service-start" "start" "$SERVICE_PATH"
+  write_systemd_control_wrapper_with_preflight "$BIN_DIR/cliproxyapi-service-start" "start" "$SERVICE_PATH" "$BIN_DIR/cliproxyapi-preflight" "$CONFIG_PATH"
   write_systemd_control_wrapper "$BIN_DIR/cliproxyapi-service-stop" "stop" "$SERVICE_PATH"
-  write_systemd_control_wrapper "$BIN_DIR/cliproxyapi-service-restart" "restart" "$SERVICE_PATH"
+  write_systemd_control_wrapper_with_preflight "$BIN_DIR/cliproxyapi-service-restart" "restart" "$SERVICE_PATH" "$BIN_DIR/cliproxyapi-preflight" "$CONFIG_PATH"
   write_systemd_control_wrapper "$BIN_DIR/cliproxyapi-service-status" "status --no-pager" "$SERVICE_PATH"
   write_systemd_logs_wrapper "$BIN_DIR/cliproxyapi-service-logs" "$SERVICE_PATH"
 
@@ -562,6 +663,7 @@ main() {
   log "OAuth/auth dir: $CONFIG_DIR"
   log "Commands:"
   log "  cliproxyapi-start"
+  log "  cliproxyapi-preflight"
   log "  cliproxyapi-codex-login"
   log "  cliproxyapi-claude-login"
   log "  cliproxyapi-antigravity-login"

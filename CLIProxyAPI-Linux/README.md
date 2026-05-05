@@ -34,6 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/daotaolaixe-quangthang/CLIProxyAPI/
 ## What it installs
 
 - `cliproxyapi`
+- `cliproxyapi-preflight`
 - `cliproxyapi-start`
 - `cliproxyapi-codex-login`
 - `cliproxyapi-claude-login`
@@ -69,6 +70,12 @@ Start server:
 ```bash
 cliproxyapi-start
 ```
+
+Before starting, `cliproxyapi-start` now checks the configured port.
+
+- If the port is free, startup continues normally
+- If the port is held by another `cli-proxy-api` process, it is stopped automatically first
+- If the port is held by some other process, startup stops with a clear error and does not kill that process
 
 OAuth login:
 
@@ -120,6 +127,7 @@ These commands are created by `install.sh` in `~/.local/bin`.
 - Reloads `systemd --user`
 - Enables the service
 - Starts the service immediately
+- Runs the same safe port preflight before enabling and starting
 - Best command to run the first time after installation
 
 ```bash
@@ -141,6 +149,7 @@ cliproxyapi-service-uninstall
 
 - Starts the background service now
 - Does not change whether the service is enabled on login unless it was already enabled
+- The `systemd --user` unit also runs the same safe port preflight through `ExecStartPre`
 
 ```bash
 cliproxyapi-service-start
@@ -179,6 +188,15 @@ cliproxyapi-service-status
 
 ```bash
 cliproxyapi-service-logs
+```
+
+`cliproxyapi-preflight`
+
+- Runs only the safe port check without starting the app
+- Useful when you want to verify whether the configured port can be used
+
+```bash
+cliproxyapi-preflight ~/.local/share/cliproxyapi/app/config.yaml
 ```
 
 ## Service Workflow
