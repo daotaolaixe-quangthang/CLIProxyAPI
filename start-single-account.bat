@@ -684,13 +684,19 @@ echo   !OAUTH_NAME! OAuth Login
 echo ================================================================
 echo.
 if /i "!OAUTH_MODE!"=="CODEX" (
-  echo [INFO] URL OAuth se hien thi ben duoi, hay copy vao browser ban muon
-  echo [INFO] Dang nhap vao tai khoan OpenAI cua ban
-  echo [INFO] OAuth callback dung port 1455
-  echo [INFO] Neu browser o may khac va khong dung SSH tunnel, copy URL callback ve day roi bam Enter
-  echo.
-  "%EXE%" --config "%BASE_CONFIG%" --codex-login --no-browser
-  set "OAUTH_EXIT=!ERRORLEVEL!"
+  if not exist "%OAUTH_PS1%" (
+    echo [ERROR] Khong tim thay OAuth helper:
+    echo        %OAUTH_PS1%
+    set "OAUTH_EXIT=1"
+  ) else (
+    echo [INFO] URL OAuth se hien thi va tu dong copy vao Clipboard
+    echo [INFO] Dang nhap vao tai khoan OpenAI cua ban
+    echo [INFO] OAuth callback dung port 1455
+    echo [INFO] Neu browser o may khac va khong dung SSH tunnel, paste callback URL vao terminal khi duoc hoi
+    echo.
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%OAUTH_PS1%" -LoginFlag "--codex-login" -Config "%BASE_CONFIG%" -InteractiveRelay
+    set "OAUTH_EXIT=!ERRORLEVEL!"
+  )
 ) else (
   if not exist "%OAUTH_PS1%" (
     echo [ERROR] Khong tim thay OAuth helper:
@@ -733,6 +739,8 @@ if errorlevel 1 (
   echo [WARN] Schema Filter khong chay, chua the lay quota tu %BASE_URL%.
   exit /b 0
 )
+echo [INFO] Dang tai quota live, co the mat 20-30 giay...
+echo.
 "%INSPECTOR%" --cpa-base-url "%BASE_URL%" -k "%MANAGEMENT_KEY%"
 set "QUOTA_EXIT=!ERRORLEVEL!"
 if not "!QUOTA_EXIT!"=="0" (
