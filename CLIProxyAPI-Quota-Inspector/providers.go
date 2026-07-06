@@ -36,6 +36,14 @@ func providerDefinitions() []*providerDef {
 			},
 			QueryReport: queryAntigravityQuota,
 		},
+		{
+			ID:           "xai",
+			SectionTitle: "Grok / xAI",
+			LoadAuths: func(ctx context.Context, cfg config) ([]authEntry, error) {
+				return loadProviderAuths(ctx, cfg, "xai")
+			},
+			QueryReport: queryXAIStatus,
+		},
 	}
 }
 
@@ -171,6 +179,34 @@ func queryCodexQuota(ctx context.Context, client *http.Client, cfg config, entry
 
 	report.Error = lastErr
 	report.Status = deriveCodexStatus(report)
+	return report, nil
+}
+
+func queryXAIStatus(ctx context.Context, client *http.Client, cfg config, entry authEntry) (quotaReport, error) {
+	_ = ctx
+	_ = client
+	_ = cfg
+	status := cleanString(firstValue(entry.raw["status"]))
+	if status == "" {
+		status = "active"
+	}
+	report := quotaReport{
+		Provider:  "xai",
+		Name:      cleanString(firstValue(entry.raw["name"], entry.raw["id"], "unknown")),
+		AuthIndex: cleanString(firstValue(entry.raw["auth_index"], entry.raw["authIndex"])),
+		PlanType:  firstNonEmpty(parsePlanType(entry.raw), cleanString(firstValue(entry.raw["plan"], entry.raw["plan_type"])), "unknown"),
+		Status:    status,
+		MetaFields: map[string]string{
+			"email": cleanString(firstValue(entry.raw["email"], entry.raw["account"], entry.raw["label"])),
+		},
+	}
+	if report.Name == "" {
+		report.Name = "unknown"
+	}
+	if report.Status == "active" && boolFromAny(firstValue(entry.raw["unavailable"], entry.raw["disabled"])) {
+		report.Status = "error"
+	}
+	report.Error = cleanString(firstValue(entry.raw["status_message"], entry.raw["error"]))
 	return report, nil
 }
 
@@ -1004,6 +1040,8 @@ func providerOrderRank(provider string) int {
 		return 1
 	case "antigravity":
 		return 2
+	case "xai":
+		return 3
 	default:
 		return 99
 	}

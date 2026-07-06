@@ -48,27 +48,29 @@ echo ================================================================
 echo   CLIProxyAPI - Quota Dashboard
 echo   Base URL : %BASE_URL%
 echo ================================================================
-echo   [1] TAT CA providers  (Codex + Gemini CLI + Antigravity)
+echo   [1] TAT CA providers  (Codex + Gemini CLI + Antigravity + Grok/xAI)
 echo   [2] Codex only
 echo   [3] Gemini CLI only
 echo   [4] Antigravity only
+echo   [5] Grok / xAI only
 echo   ---------------------------------------------------------------
-echo   [5] Summary only  (tong quan, khong chi tiet tung account)
-echo   [6] Export JSON   (Desktop\quota-export.json)
+echo   [6] Summary only  (tong quan, khong chi tiet tung account)
+echo   [7] Export JSON   (Desktop\quota-export.json)
 echo   ---------------------------------------------------------------
 echo   [Q] Thoat
 echo ================================================================
 echo.
-choice /c 123456Q /n /m "Chon che do [1-6/Q]: "
+choice /c 1234567Q /n /m "Chon che do [1-7/Q]: "
 set "CHO=%ERRORLEVEL%"
 
 if "%CHO%"=="1" goto run_all
 if "%CHO%"=="2" goto run_codex
 if "%CHO%"=="3" goto run_gemini
 if "%CHO%"=="4" goto run_antigravity
-if "%CHO%"=="5" goto run_summary
-if "%CHO%"=="6" goto run_json
-if "%CHO%"=="7" exit /b 0
+if "%CHO%"=="5" goto run_xai
+if "%CHO%"=="6" goto run_summary
+if "%CHO%"=="7" goto run_json
+if "%CHO%"=="8" exit /b 0
 goto menu
 
 :run_all
@@ -101,6 +103,14 @@ echo.
 echo [ANTIGRAVITY] Dang tai quota Antigravity...
 echo.
 "%INSPECTOR%" --cpa-base-url "%BASE_URL%" -k "%MANAGEMENT_KEY%" --filter-provider antigravity
+goto done
+
+:run_xai
+cls
+echo.
+echo [GROK / xAI] Dang tai quota Grok / xAI...
+echo.
+"%INSPECTOR%" --cpa-base-url "%BASE_URL%" -k "%MANAGEMENT_KEY%" --filter-provider xai
 goto done
 
 :run_summary

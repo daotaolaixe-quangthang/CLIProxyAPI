@@ -157,17 +157,21 @@ func renderGeminiSection(reports []quotaReport, cfg config, tableHeader, rowBase
 }
 
 func renderGenericSection(reports []quotaReport, tableHeader, rowBase, rowAlt, themeDim lipgloss.Style) {
-	header := padRight("File", 48) + " " + padRight("Status", 12) + " " + padRight("Plan", 16)
+	header := padRight("File", 48) + " " + padRight("Status", 12) + " " + padRight("Plan", 16) + " " + padRight("Email", 32)
 	fmt.Println(tableHeader.Render(header))
 	fmt.Println(themeDim.Render(strings.Repeat("-", lipgloss.Width(header))))
 	for i, report := range reports {
 		row := padRight(truncate(report.Name, 48), 48) + " " +
 			styleStatus(report.Status).Render(padRight(report.Status, 12)) + " " +
-			padRight(defaultString(report.PlanType, "-"), 16)
+			padRight(defaultString(report.PlanType, "-"), 16) + " " +
+			padRight(truncate(defaultString(report.MetaFields["email"], "-"), 32), 32)
 		if i%2 == 0 {
 			fmt.Println(rowBase.Render(row))
 		} else {
 			fmt.Println(rowAlt.Render(row))
+		}
+		if report.Error != "" {
+			fmt.Println(themeDim.Render("  error: " + report.Error))
 		}
 	}
 }

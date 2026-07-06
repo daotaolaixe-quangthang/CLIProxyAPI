@@ -339,6 +339,8 @@ func titleProvider(provider string) string {
 		return "Codex"
 	case "gemini-cli":
 		return "Gemini CLI"
+	case "xai":
+		return "Grok / xAI"
 	default:
 		parts := strings.FieldsFunc(provider, func(r rune) bool {
 			return r == '-' || r == '_' || r == ' '
