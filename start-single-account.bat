@@ -318,6 +318,7 @@ goto tui_loop
 :tui_loop
 cls
 call :refresh_runtime_status
+call :set_next_refresh_time
 echo.
 echo ================================================================
 echo   CLIProxyAPI - Custom Account Mode TUI
@@ -327,7 +328,7 @@ echo   Claude Code  : port !FILTER_PORT! ^(schema-filter^)
 echo   CLIProxyAPI  : port !USE_PORT!
 echo   CLI PID      : !CLI_STATUS!
 echo   Filter PID   : !FILTER_STATUS!
-echo   Auto refresh : 15 phut / lan
+echo   Auto refresh : 15 phut / lan ^(Next !NEXT_REFRESH!^)
 echo ================================================================
 echo.
 call :render_quota
@@ -618,6 +619,12 @@ call :is_tracked_cli_pid
 if not errorlevel 1 set "CLI_STATUS=!CLI_PID! (running)"
 call :is_tracked_filter_pid
 if not errorlevel 1 set "FILTER_STATUS=!FILTER_PID! (running)"
+exit /b 0
+
+:set_next_refresh_time
+set "NEXT_REFRESH="
+for /f "usebackq delims=" %%T in (`powershell -NoProfile -Command "(Get-Date).AddMinutes(15).ToString('HH:mm')" 2^>nul`) do set "NEXT_REFRESH=%%T"
+if not defined NEXT_REFRESH set "NEXT_REFRESH=?"
 exit /b 0
 
 :load_management_key
